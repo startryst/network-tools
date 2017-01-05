@@ -4,7 +4,8 @@
 import subprocess
 import re
 import urllib.request
-import time
+import socket
+# import time
 
 
 def search_as_name_merit(ip):
@@ -28,28 +29,32 @@ def search_as_name_cymru(ip):
 
 def search_as_name_ipip(ip):
     name_raw_str = urllib.request.urlopen("http://freeapi.ipip.net/" + ip).read().decode()
-    time.sleep(1)
-    result = name_raw_str[1:-1]
+    # time.sleep(1)
+    raw_string = name_raw_str[1:-1].replace('"','')
+    raw_list = raw_string.split(',')
+    result = raw_list[1] + ':' + raw_list[-1]
     return result
 
 
 def main():
-    target = input("Please enter the IP address to trace: ")
+    target = input("Please enter the domain name/IP address to trace: ")
     max_ttl = input("Please enter the max hops: ")
-    raw_list = []
     last_asn = ''
-    print("IP Address".ljust(18) + "ASN".ljust(13) + "MeritRADb".ljust(30) + "Team Cymru".ljust(30) + "ipip.net")
+    print("IP Address".ljust(15) + '|' + "ASN".ljust(9) + '|' + "MeritRADb".ljust(29) + '|' + "Team Cymru".ljust(37)
+          + '|' + "ipip.net")
+
+    # # capture the (ip) address if the target is a domain name
+    ip = socket.getaddrinfo(target, None)[0][4][0]
 
     for i in range(1, int(max_ttl)+1):
-        raw_output = subprocess.Popen(['ping', '-c', '1', '-m', str(i), '-i', '0.1', '-t', '1', target],
+        raw_output = subprocess.Popen(['ping', '-c', '1', '-m', str(i), '-i', '0.1', '-t', '1', ip],
                                       stdout=subprocess.PIPE)
         output = raw_output.communicate()[0].decode()
 
         # if mtu expired, the remote end will send our Time to live exceeded ICMP error message, the error message
-        # contain the IP address of the responding (hop),also we capture the (ip) address if the target is a domain name
+        # contain the IP address of the responding (hop)
         if 'Time to live exceeded' in output:
             output_list = output.split('\n')
-            ip = re.search(r'(\d+\.\d+\.\d+\.\d+)', output_list[0]).group(1)
             hop = re.search(r'(\d+\.\d+\.\d+\.\d+)', output_list[1]).group(1)
 
             # To search merit's whois server
@@ -57,7 +62,7 @@ def main():
 
             # To calculate the cross AS border and print '='
             if asn != 'Not Found' and asn != last_asn and last_asn != '':
-                print('=' * 130)
+                print('======AS BORDER======' * 6)
                 last_asn = asn
             elif asn == 'Not Found' or asn == '*':
                 pass
@@ -71,15 +76,27 @@ def main():
             ipip = search_as_name_ipip(hop)
 
             # Print the result and cut only the first 30 characters for merit and cymru
-            print(hop.ljust(18) + asn.ljust(13) + merit[:29].ljust(30) + cymru[:29].ljust(30) + ipip)
+            print(hop.ljust(15) + '|' + asn.ljust(9) + '|' + merit[:28].ljust(29) + '|' + cymru[:36].ljust(37) + '|'
+                  + ipip)
         elif '1 packets received' in output:
             merit, asn = search_as_name_merit(ip)
             cymru = search_as_name_cymru(ip)
             ipip = search_as_name_ipip(ip)
-            print(ip.ljust(18) + asn.ljust(13) + merit.ljust[:29].ljust(30) + cymru[:29].ljust(30) + ipip)
+
+            # To calculate the cross AS border and print '='
+            if asn != 'Not Found' and asn != last_asn and last_asn != '':
+                print('======AS BORDER======' * 6)
+                last_asn = asn
+            elif asn == 'Not Found' or asn == '*':
+                pass
+            else:
+                last_asn = asn
+
+            print(ip.ljust(15) + '|' + asn.ljust(9) + '|' + merit[:28].ljust(29) + '|' + cymru[:36].ljust(37) + '|'
+                  + ipip)
             break
         else:
-            print('*'.ljust(18) + '*'.ljust(13) + '*'.ljust(30) + '*'.ljust(30) + '*')
+            print('*'.ljust(15) + '|' + '*'.ljust(9) + '|' + '*'.ljust(29) + '|' + '*'.ljust(37) + '|' + '*')
 
 
 if __name__ == '__main__':
