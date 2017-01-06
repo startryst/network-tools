@@ -16,3 +16,5 @@ result.txt
 .idea/dictionaries/Bright.xml
 
 asn_trace.txt
+
+__pycache__/fast.cpython-35.pyc
