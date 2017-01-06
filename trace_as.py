@@ -65,7 +65,7 @@ def as_border_check(asn, last_asn, filename):
     if 'AS' in asn and 'AS' in last_asn and asn != last_asn:
         print('======AS BORDER======' * 6)
         with open(filename, "a") as file_to_save:
-            file_to_save.write('\n======AS BORDER======' * 6)
+            file_to_save.write('\n' + '======AS BORDER======' * 6)
         return asn
     elif asn == 'Not Found' or asn == '*' or asn == 'Timeout':
         return last_asn
@@ -89,17 +89,13 @@ def main():
     # print title column
     print_save("IP Address", "ASN", "MeritRADb", "Team Cymru", "ipip.net", file_name, ip)
 
-    # Conduct fast trace twice to get the full hop ip address list, in case one test may miss some hops
+    # Conduct fast trace to get the full hop ip address list
     trace_list = fast_trace(ip, max_ttl)
-    trace_list1 = fast_trace(ip, max_ttl)
-    for t, t1, i in zip(trace_list, trace_list1, range(len(trace_list))):
-        if t == '*' and t1 != '*':
-            trace_list[i] = t1
 
     # Concurrent processing of whois for both merit and cymru
     for i in trace_list:
         if i != '*':
-            merit_raw.append(subprocess.Popen(['whois', '-h', '198.108.0.18', i], stdout=subprocess.PIPE))
+            merit_raw.append(subprocess.Popen(['whois', '-m', i], stdout=subprocess.PIPE))
             cymru_raw.append(subprocess.Popen(['whois', '-h', 'v4.whois.cymru.com', i], stdout=subprocess.PIPE))
         else:
             merit_raw.append('*')
