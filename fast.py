@@ -8,7 +8,7 @@ def fast_trace(ip, max_ttl):
     raw_list = []
     trace_list = []
     for i in range(1, int(max_ttl)+1):
-        raw_list.append(subprocess.Popen(['ping', '-c', '1', '-m', str(i), '-i', '0.1', '-t', '1', ip], stdout=subprocess.PIPE))
+        raw_list.append(subprocess.Popen(['ping', '-c', '1', '-m', str(i), '-i', '0.1', '-t', '2', ip], stdout=subprocess.PIPE))
     for i in raw_list:
         output = i.communicate()[0].decode()
         if 'Time to live exceeded' in output:

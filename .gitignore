@@ -13,10 +13,17 @@ result.txt
 
 .idea/workspace.xml
 
+<<<<<<< HEAD
 asn_trace.txt
 
 .idea/dictionaries/Bright.xml
 
+=======
+.idea/dictionaries/Bright.xml
+
+asn_trace.txt
+
+>>>>>>> asn-trace-to-multiprocess
 __pycache__/fast.cpython-35.pyc
 
 trace_as.spec
