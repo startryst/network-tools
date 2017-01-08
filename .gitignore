@@ -47,3 +47,17 @@ build/trace_as/base_library.zip
 __pycache__/trace_as.cpython-35.pyc
 
 .trace_as.py.swp
+
+build/trace_as_step_v1.0/warntrace_as_step_v1.0.txt
+
+*.toc
+
+*.pyz
+
+*.pkg
+
+*.zip
+
+__pycache__/trace_as_step.cpython-35.pyc
+
+trace_as_step_v1.0.spec
