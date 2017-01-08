@@ -79,6 +79,8 @@ def main():
     max_ttl = input("Please enter the max hops: ")
     file_name = str(input('Please enter the file name to save for the trace result[asn_trace.txt]: ') or
                     'asn_trace.txt')
+    skip_ipip = bool(input("ipip.net has concurrent connection detection, do you want to skip ipip.net?"
+                           "[y] or [press enter for n]: "))
     merit_raw = []
     cymru_raw = []
     # last_asn for as border check
@@ -114,7 +116,10 @@ def main():
         elif m != '*':
 
             # Due to ipip.net has concurrent limitation restriction, need to avoid con-current processing
-            ipip = search_as_name_ipip(t)
+            if skip_ipip:
+                ipip = "Skipped"
+            else:
+                ipip = search_as_name_ipip(t)
 
             merit, asn = merit_filter(m.communicate()[0].decode())
             cymru = cymru_filter(c.communicate()[0].decode())
