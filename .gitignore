@@ -45,3 +45,5 @@ build/trace_as/out00-Analysis.toc
 build/trace_as/base_library.zip
 
 __pycache__/trace_as.cpython-35.pyc
+
+.trace_as.py.swp
