@@ -7,6 +7,7 @@ import urllib.request
 import socket
 from fast import fast_trace
 import time
+import netaddr
 
 
 def merit_filter(item):
@@ -67,7 +68,7 @@ def as_border_check(asn, last_asn, filename):
         with open(filename, "a") as file_to_save:
             file_to_save.write('\n' + '======AS BORDER======' * 6)
         return asn
-    elif asn == 'Not Found' or asn == '*' or asn == 'Timeout':
+    elif asn == 'Not Found' or asn == '*' or asn == 'Timeout' or asn == 'Private':
         return last_asn
     else:
         return asn
@@ -94,7 +95,10 @@ def main():
 
     # Concurrent processing of whois for both merit and cymru
     for i in trace_list:
-        if i != '*':
+        if i != '*' and netaddr.IPAddress(i).is_private():
+            merit_raw.append('Private')
+            cymru_raw.append('Private')
+        elif i != '*':
             merit_raw.append(subprocess.Popen(['whois', '-m', i], stdout=subprocess.PIPE))
             cymru_raw.append(subprocess.Popen(['whois', '-h', 'v4.whois.cymru.com', i], stdout=subprocess.PIPE))
         else:
@@ -103,12 +107,17 @@ def main():
 
     # Filter output and print result
     for t, m, c in zip(trace_list, merit_raw, cymru_raw):
-        if m != '*':
-            merit, asn = merit_filter(m.communicate()[0].decode())
-            cymru = cymru_filter(c.communicate()[0].decode())
+        if m == 'Private':
+
+            # print & save result
+            print_save(t, 'Private', 'Private', 'Private', 'Private', file_name, ip)
+        elif m != '*':
 
             # Due to ipip.net has concurrent limitation restriction, need to avoid con-current processing
             ipip = search_as_name_ipip(t)
+
+            merit, asn = merit_filter(m.communicate()[0].decode())
+            cymru = cymru_filter(c.communicate()[0].decode())
 
             # To calculate the cross AS border and print '======AS BORDER======'
             last_asn = as_border_check(asn, last_asn, file_name)
