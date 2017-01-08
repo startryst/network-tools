@@ -5,8 +5,17 @@ import subprocess
 import re
 import urllib.request
 import socket
-from fast import fast_trace
 import time
+import netaddr
+
+
+def ping_filter(item):
+    if 'Time to live exceeded' in item or '1 packets received' in item:
+        output_list = item.split('\n')
+        hop = re.search(r'(\d+\.\d+\.\d+\.\d+)', output_list[1]).group(1)
+        return hop
+    else:
+        return '*'
 
 
 def merit_filter(item):
@@ -67,7 +76,7 @@ def as_border_check(asn, last_asn, filename):
         with open(filename, "a") as file_to_save:
             file_to_save.write('\n' + '======AS BORDER======' * 6)
         return asn
-    elif asn == 'Not Found' or asn == '*' or asn == 'Timeout':
+    elif asn == 'Not Found' or asn == '*' or asn == 'Timeout' or asn == 'Private':
         return last_asn
     else:
         return asn
@@ -78,8 +87,7 @@ def main():
     max_ttl = input("Please enter the max hops: ")
     file_name = str(input('Please enter the file name to save for the trace result[asn_trace.txt]: ') or
                     'asn_trace.txt')
-    merit_raw = []
-    cymru_raw = []
+
     # last_asn for as border check
     last_asn = ''
 
@@ -89,34 +97,38 @@ def main():
     # print title column
     print_save("IP Address", "ASN", "MeritRADb", "Team Cymru", "ipip.net", file_name, ip)
 
-    # Conduct fast trace to get the full hop ip address list
-    trace_list = fast_trace(ip, max_ttl)
+    # Incremental of ttl for each ping, and query whois against merit and cymru, query http API against ipip.net
+    for ttl in range(1, int(max_ttl)+1):
+        ping_output = subprocess.Popen(['ping', '-c', '1', '-m', str(ttl), '-i', '0.1', '-t', '2', ip],
+                                       stdout=subprocess.PIPE).communicate()[0].decode()
+        i = ping_filter(ping_output)
 
-    # Concurrent processing of whois for both merit and cymru
-    for i in trace_list:
-        if i != '*':
-            merit_raw.append(subprocess.Popen(['whois', '-m', i], stdout=subprocess.PIPE))
-            cymru_raw.append(subprocess.Popen(['whois', '-h', 'v4.whois.cymru.com', i], stdout=subprocess.PIPE))
-        else:
-            merit_raw.append('*')
-            cymru_raw.append('*')
-
-    # Filter output and print result
-    for t, m, c in zip(trace_list, merit_raw, cymru_raw):
-        if m != '*':
-            merit, asn = merit_filter(m.communicate()[0].decode())
-            cymru = cymru_filter(c.communicate()[0].decode())
-
-            # Due to ipip.net has concurrent limitation restriction, need to avoid con-current processing
-            ipip = search_as_name_ipip(t)
+        # check to see if the ip address is private IP address
+        if i != '*' and netaddr.IPAddress(i).is_private():
+            print_save(i, 'Private', 'Private', 'Private', 'Private', file_name, ip)
+        elif i != '*':
+            merit_raw = subprocess.Popen(['whois', '-m', i], stdout=subprocess.PIPE)
+            cymru_raw = subprocess.Popen(['whois', '-h', 'v4.whois.cymru.com', i], stdout=subprocess.PIPE)
+            ipip = search_as_name_ipip(i)
+            merit, asn = merit_filter(merit_raw.communicate()[0].decode())
+            cymru = cymru_filter(cymru_raw.communicate()[0].decode())
 
             # To calculate the cross AS border and print '======AS BORDER======'
             last_asn = as_border_check(asn, last_asn, file_name)
 
             # print result
-            print_save(t, asn, merit, cymru, ipip, file_name, ip)
+            print_save(i, asn, merit, cymru, ipip, file_name, ip)
+
+        # if no reply received, marked as '*'
         else:
             print_save('*', '*', '*', '*', '*', file_name, ip)
+
+        # if the echo-reply received from the destination, break the loop
+        if i == ip:
+            print("Trace Done!")
+            break
+        else:
+            pass
 
 
 if __name__ == '__main__':
