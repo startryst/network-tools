@@ -8,7 +8,6 @@ import socket
 from fast import fast_trace
 import time
 import netaddr
-# merge with master
 
 
 def merit_filter(item):
